@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  EventBridge Sample Template
+  https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/AWS_Events.html
+
+##########################################################################
+#   Parameters
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sample
+  StageType:
+    Type: String
+    Default: dev
+
+Resources:
+  ##########################################################################
+  #   AWS::IAM::Role
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  ##########################################################################
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub states-${DefaultName}-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+  ##########################################################################
+  #   AWS::IAM::Policy
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  ##########################################################################
+  StepFunctionsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub states-${DefaultName}-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: [
+              "batch:SubmitJob",
+              "batch:DescribeJobs",
+              "batch:TerminateJob",
+              "events:PutTargets",
+              "events:PutRule",
+              "events:DescribeRule"
+              ]
+            Resource: "*"
+          - Effect: "Allow"
+            Action: [
+              "xray:PutTraceSegments",
+              "xray:PutTelemetryRecords",
+              "xray:GetSamplingRules",
+              "xray:GetSamplingTargets"
+            ]
+            Resource: "*"
+          - Effect: "Allow"
+            Action: [
+            "sns:Publish"
+            ]
+            Resource: "*"
+          - Effect: "Allow"
+            Action: [
+                "autoscaling:Describe*",
+                "cloudwatch:*",
+                "logs:*",
+                "sns:*",
+                "iam:GetPolicy",
+                "iam:GetPolicyVersion",
+                "iam:GetRole",
+                "iam:PassRole",
+                "iam:DetachRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:DeleteRole",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy",
+                "iam:PutRolePolicy"
+            ]
+            Resource: "*"
+          - Effect: "Allow"
+            Action: "states:StartExecution"
+            Resource: "*"
+          - Effect: "Allow"
+            Action: "lambda:InvokeFunction"
+            Resource: "*"
+          - Effect: "Allow"
+            Sid: "CloudWatchEventsFullAccess"
+            Action: "events:*"
+            Resource: "*"
+      Roles:
+        - !Ref StepFunctionsRole
+##########################################################################
+#   Outputs
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+##########################################################################
+Outputs:
+  StepFunctionsRoleArn:
+    Description: >
+      Arn of StepFunctionsRole
+    Value: !GetAtt StepFunctionsRole.Arn
+    Export:
+      Name: sample-iam:StepFunctionsRoleArn
