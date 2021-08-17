@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  EventBridge Sample Template
+  https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/AWS_Events.html
+
+##########################################################################
+#   Parameters
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sample
+  StageType:
+    Type: String
+    Default: dev
+
+Resources:
+  ##########################################################################
+  #   AWS::Events::Rule
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-events-rule.html
+  ##########################################################################
+  EventBridgeSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: >
+        EventBridge Schedule Sample
+      Name: !Sub ${StageType}-${DefaultName}-events-rules
+      #   https://docs.aws.amazon.com/ko_kr/eventbridge/latest/userguide/eb-create-rule-schedule.html
+      ScheduleExpression: cron(0/15 8-17 ? * 2-6 *) # 월~금, 오전8~오후5, 15분마다
+      State: ENABLED
+      #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-properties-events-rule-target.html
+      Targets:
+        - Arn: !ImportValue sample-states:StatesArn
+          RoleArn: !GetAtt SampleTargetStatesRole.Arn
+          Id: !ImportValue sample-states:StatesName
+          Input: !Sub '{"stage_type":"${StageType}"}'
+  ##########################################################################
+  #   AWS::IAM::Role
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  ##########################################################################
+  SampleTargetStatesRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${DefaultName}-states-target-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+  ##########################################################################
+  #   AWS::IAM::Policy
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  ##########################################################################
+  StepFunctionsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${DefaultName}-states-target-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "states:StartExecution"
+            Resource: "*"
+      Roles:
+        - !Ref SampleTargetStatesRole
