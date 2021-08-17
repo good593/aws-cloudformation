@@ -1,0 +1,30 @@
+version: 0.2
+env:
+  git-credential-helper: yes
+  variables:
+    # package 파라미터 정의
+    PACKAGE_S3_BUCKET: 만들어진 s3 이름
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+
+  pre_build:
+    commands:
+      - echo Build started on `date`
+
+  build:
+    commands:
+      - echo building Source by SAM...
+      - sam build --template template/lambda/template.yml
+
+  post_build:
+    commands:
+      - echo package Source...
+      - sam package --s3-bucket $PACKAGE_S3_BUCKET --output-template-file outputtemplate.yml --s3-prefix build/sample-lambda
+
+artifacts:
+  files:
+    - outputtemplate.yml
+    - template/lambda/template.yml

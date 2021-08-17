@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Aico Concentrate service Template
+
+##########################################################################
+#   Parameters
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sample
+  PythonVersion:
+    Type: String
+    Default: python3.8
+  StageType:
+    Type: String
+    Default: dev
+
+##########################################################################
+#   Globals
+#   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-specification-template-anatomy-globals.html
+##########################################################################
+Globals:
+  Function:
+    Runtime: !Sub ${PythonVersion}
+    MemorySize: 3072
+    Timeout: 900
+    Layers:
+      # - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:layer이름:버전(숫자)
+      - !Ref SampleSharedLayer
+    Tags:
+      ServiceType: !Sub ${ServiceType}
+    AutoPublishAlias: !Ref StageType
+    VpcConfig:
+      SecurityGroupIds:
+        - sg-00000000000000000
+      SubnetIds:
+        - subnet-00000000000000000
+        - subnet-11111111111111111
+
+Resources:
+  ##########################################################################
+  #   AWS::Serverless::LayerVersion
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-layerversion.html
+  ##########################################################################
+  SampleSharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - !Sub ${PythonVersion}
+      ContentUri: template/lambda/layer
+      Description: Provides the base backend shared library and dependencies
+      LayerName: !Sub ${DefaultName}-shared-layer
+    Metadata:
+      BuildMethod: !Sub ${PythonVersion} # Required to have AWS SAM build this layer
+  ##########################################################################
+  #   AWS::Serverless::Function
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-function.html
+  ##########################################################################
+  SampleLambda:
+    Type: AWS::Serverless::Function
+    DependsOn: # SampleSharedLayer 생성 후 SampleLambda 생성
+      - SampleSharedLayer
+    Properties:
+      FunctionName: !Sub ${DefaultName}-lambda
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/람다롤이름
+      CodeUri: template/lambda/src
+      Handler: app.lambda_handler
+      Tags:
+        Name: !Sub ${DefaultName}-lambda
+##########################################################################
+#   Outputs
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+##########################################################################
+Outputs:
+  SampleLambdaName:
+    Description: >
+      Name of SampleLambda
+    Value: !GetAtt SampleLambda.Name
+    Export:
+      Name: sample-lambda:SampleLambdaName
+  SampleLambdaArn:
+    Description: >
+      Arn of SampleLambda
+    Value: !GetAtt SampleLambda.Arn
+    Export:
+      Name: sample-lambda:SampleLambdaArn
