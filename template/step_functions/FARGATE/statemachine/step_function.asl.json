@@ -1,0 +1,62 @@
+{
+  "Comment": "Standard Step Functions",
+  "StartAt": "Lambda01Task",
+  "States": {
+    "Lambda01Task": {
+      "Type": "Task",
+      "Resource": "${Lambda01TaskArn}",
+      "Next": "Lambda02Map01"
+    },
+    "Lambda02Map01": {
+      "Type": "Map",
+      "MaxConcurrency": 0,
+      "InputPath": "$",
+      "ItemsPath": "$.list",
+      "Parameters": {
+        "item.$": "$$.Map.Item.Value",
+        "stage_type.$": "$.stage_type"
+      },
+      "Next": "Lambda03Task",
+      "Iterator": {
+        "StartAt": "Lambda02Map01Task",
+        "States": {
+          "Lambda02Map01Task": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::batch:submitJob.sync",
+            "End": true,
+            "Parameters": {
+              "JobDefinition": "${JobDefinition}",
+              "JobName": "Lambda02Map01Task",
+              "JobQueue": "${JobQueue}",
+              "ContainerOverrides": {
+                "Environment": [
+                  {
+                    "Name": "TASK_TOKEN",
+                    "Value.$": "$$.Task.Token"
+                  },
+                  {
+                    "Name": "stage_type",
+                    "Value.$": "$.stage_type"
+                  },
+                  {
+                    "Name": "name",
+                    "Value.$": "$.name"
+                  },
+                  {
+                    "Name": "age",
+                    "Value.$": "$.age"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "Lambda03Task": {
+      "Type": "Task",
+      "Resource": "${Lambda03TaskArn}",
+      "End": true
+    }
+  }
+}

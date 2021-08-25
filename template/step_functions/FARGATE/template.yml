@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Aico Concentrate service Template
+
+##########################################################################
+#   Parameters
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sample
+  PythonVersion:
+    Type: String
+    Default: python3.8
+  StageType:
+    Type: String
+    Default: dev
+  BatchRole:
+    Type: String
+    Default: batch-sample-role
+
+##########################################################################
+#   Globals
+#   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-specification-template-anatomy-globals.html
+##########################################################################
+Globals:
+  Function:
+    Runtime: !Sub ${PythonVersion}
+    MemorySize: 3072
+    Timeout: 900
+    Layers:
+      # - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:layer이름:버전(숫자)
+      - !Ref SampleSharedLayer
+    Tags:
+      ServiceType: !Sub ${ServiceType}
+    AutoPublishAlias: !Ref StageType
+    VpcConfig:
+      SecurityGroupIds:
+        - sg-00000000000000000
+      SubnetIds:
+        - subnet-00000000000000000
+        - subnet-11111111111111111
+
+Resources:
+  ##########################################################################
+  #   AWS::Serverless::Function
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-function.html
+  ##########################################################################
+  Lambda01Task:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-Lambda01Task
+      Description: !Sub ${DefaultName}-Lambda01Task
+      Tags:
+        Name: !Sub ${DefaultName}-Lambda01Task
+      CodeUri: template/step_functions/EXPRESS/functions/task_01_lambda
+      Handler: app.lambda_handler
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
+  Lambda02Map01Task:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-Lambda02Map01Task
+      Description: !Sub ${DefaultName}-Lambda02Map01Task
+      Tags:
+        Name: !Sub ${DefaultName}-Lambda02Map01Task
+      CodeUri: template/step_functions/EXPRESS/functions/task_02_map_01_batch
+      Handler: app.lambda_handler
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
+  Lambda03Task:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-Lambda03Task
+      Description: !Sub ${DefaultName}-Lambda03Task
+      Tags:
+        Name: !Sub ${DefaultName}-Lambda03Task
+      CodeUri: template/step_functions/EXPRESS/functions/task_03_lambda
+      Handler: app.lambda_handler
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
+  ##########################################################################
+  #   AWS::Batch::ComputeEnvironment
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-computeenvironment.html
+  ##########################################################################
+  BatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName: !Sub ${StageType}-batch-${DefaultName}-CompEnv
+      Type: MANAGED #관리형
+      ServiceRole: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole}
+      State: ENABLED
+      ComputeResources:
+        MaxvCpus: 72
+        SecurityGroupIds:
+          - sg-00000000000000000
+        Subnets:
+          - subnet-00000000000000000
+          - subnet-11111111111111111
+        Type: FARGATE # FARGATE or EC2   / FARGATE 이용시 MaxvCpus만 설정하면 됨
+  ##########################################################################
+  #   AWS::Batch::JobDefinition
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-jobdefinition.html
+  ##########################################################################
+  BatchJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      JobDefinitionName: !Sub ${StageType}-batch-${DefaultName}-JobDef
+      Type: container
+      PlatformCapabilities:
+        - FARGATE
+      RetryStrategy:
+        Attempts: 1
+      Timeout:
+        AttemptDurationSeconds: 7200
+      ContainerProperties:
+        ResourceRequirements:
+          - Type: "VCPU"
+            Value: "4" # MAX 4vCPU
+          - Type: "MEMORY"
+            Value: "30720" # 8GB # 16384(16GB) # MAX 30720(30GB)
+        ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} #Fargate 이용시 사용될 역할
+        Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/image-name-ecr:${StageType} # 이미지 파일 넣기
+        JobRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} # job 역할
+        User: root
+        Privileged: false #컨테이너 호스트 권한 > FARGATE는 false
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+        ReadonlyRootFilesystem: false #읽기 전용 엑세스 권한
+        Command: # 이미지에서 수행할 커맨드
+          - python3
+          - -m
+          - app
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref BatchLogGroup
+  ##########################################################################
+  #   AWS::Logs::LogGroup
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  ##########################################################################
+  BatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/batch/${StageType}-batchlog # 사용자 정의 로그 그룹
+      RetentionInDays: 30 # 로그 그룹 유지 기간
+  ##########################################################################
+  #   AWS::Serverless::StateMachine
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-statemachine.html
+  ##########################################################################
+  SampleStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: EXPRESS
+      Name: !Sub ${StageType}-${DefaultName}-StateMachine
+      Tags:
+        Name: !Sub ${StageType}-${DefaultName}-StateMachine
+        ServicType: !Sub ${ServiceType}
+      Role: !ImportValue sample-iam:StepFunctionsRoleArn # iam/template.yml 참고
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt SampleStateMachineLogGroup.Arn
+        IncludeExecutionData: True
+        Level: ALL #ERROR
+      DefinitionUri: template/step_functions/EXPRESS/statemachine/step_function.asl.json
+      DefinitionSubstitutions:
+        Lambda01TaskArn: !GetAtt Lambda01Task.Arn
+        Lambda02Map01TaskArn: !GetAtt Lambda02Map01Task.Arn
+        Lambda03TaskArn: !GetAtt Lambda03Task.Arn
+  # StepFunction 로그
+  SampleStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/states/${StageType}-${DefaultName}-StateMachine
+      RetentionInDays: 30
