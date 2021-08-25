@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Batch(fargate) Step Function Template
+  Batch(ec2) Step Function Template
 
 ##########################################################################
 #   Parameters
@@ -55,7 +55,7 @@ Resources:
       Description: !Sub ${DefaultName}-Lambda01Task
       Tags:
         Name: !Sub ${DefaultName}-Lambda01Task
-      CodeUri: template/step_functions/FARGATE/functions/task_01_lambda
+      CodeUri: template/step_functions/EC2/functions/task_01_lambda
       Handler: app.lambda_handler
       Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
   Lambda03Task:
@@ -65,7 +65,7 @@ Resources:
       Description: !Sub ${DefaultName}-Lambda03Task
       Tags:
         Name: !Sub ${DefaultName}-Lambda03Task
-      CodeUri: template/step_functions/FARGATE/functions/task_03_lambda
+      CodeUri: template/step_functions/EC2/functions/task_03_lambda
       Handler: app.lambda_handler
       Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
   ##########################################################################
@@ -168,7 +168,7 @@ Resources:
               LogGroupArn: !GetAtt SampleStateMachineLogGroup.Arn
         IncludeExecutionData: True
         Level: ALL #ERROR
-      DefinitionUri: template/step_functions/FARGATE/statemachine/step_function.asl.json
+      DefinitionUri: template/step_functions/EC2/statemachine/step_function.asl.json
       DefinitionSubstitutions:
         Lambda01TaskArn: !GetAtt Lambda01Task.Arn
         JobDefinition: !Sub ${BatchJobDefinition}

@@ -1,0 +1,45 @@
+version: 0.2
+env:
+  git-credential-helper: yes
+  variables:
+    # docker 파라미터 정의
+    IMAGE_REPO_NAME: aws ecr에 등록이 되어 있는 name > image-name-ecr
+    IMAGE_TAG: dev #latest
+    AWS_ACCOUNT_ID: aws account id
+    AWS_DEFAULT_REGION: region 서울인 경우 > ap-northeast-2
+    # package 파라미터 정의
+    PACKAGE_S3_BUCKET: 만들어진 s3 이름
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+
+  pre_build:
+    commands:
+      # Docker push를 할 ECR에 로그인 필요
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo building Source by SAM...
+      - sam build --template template/step_functions/EC2/template.yml
+
+      - echo Building the Docker image...
+      - docker build -f template/step_functions/EC2/functions/task_02_map_01_batch/Dockerfile -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo package Source...
+      - sam package --s3-bucket $PACKAGE_S3_BUCKET --output-template-file outputtemplate.yml --s3-prefix build/sample
+
+      - echo push the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+artifacts:
+  files:
+    - outputtemplate.yml
+    - template/step_functions/EC2/template.yml
