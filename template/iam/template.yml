@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  EventBridge Sample Template
-  https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/AWS_Events.html
+  IAM Sample Template
+  https://aws.amazon.com/ko/premiumsupport/knowledge-center/cloudformation-attach-managed-policy/
 
 ##########################################################################
 #   Parameters

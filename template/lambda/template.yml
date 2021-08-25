@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Aico Concentrate service Template
+  Lambda Sample Template
+  https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-function.html
 
 ##########################################################################
 #   Parameters
@@ -70,6 +71,18 @@ Resources:
       Handler: app.lambda_handler
       Tags:
         Name: !Sub ${DefaultName}-lambda
+  ##########################################################################
+  #   AWS::Lambda::Alias
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-alias.html
+  #   이미 람다가 만들어져 있는 경우에만 사용 가능
+  ##########################################################################
+  SampleLambdaAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      FunctionName: !Sub ${DefaultName}-lambda-name
+      FunctionVersion: $LATEST
+      Name: !Ref StageType # Alias 명
+      Description: "Operation"
 ##########################################################################
 #   Outputs
 #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
