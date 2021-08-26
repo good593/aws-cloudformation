@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SNS Sample Template
+  https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/AWS_Events.html
+
+##########################################################################
+#   Parameters
+#   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sns-sample
+  PythonVersion:
+    Type: String
+    Default: python3.8
+  StageType:
+    Type: String
+    Default: dev
+
+##########################################################################
+#   Globals
+#   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-specification-template-anatomy-globals.html
+##########################################################################
+Globals:
+  Function:
+    Runtime: !Sub ${PythonVersion}
+    MemorySize: 3072
+    Timeout: 900
+    Layers:
+      # - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:layer이름:버전(숫자)
+      - !Ref SampleSharedLayer
+    Tags:
+      ServiceType: !Sub ${ServiceType}
+    AutoPublishAlias: !Ref StageType
+    VpcConfig:
+      SecurityGroupIds:
+        - sg-00000000000000000
+      SubnetIds:
+        - subnet-00000000000000000
+        - subnet-11111111111111111
+
+Resources:
+  ########################################################################## 
+  ##########################################################################
+  #   AWS::Serverless::Function
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-function.html
+  #   슬렉 호출 람다
+  ##########################################################################
+  SlackLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-slack
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/람다롤이름
+      CodeUri: template/sns/slack
+      Handler: app.slack_handler
+      Tags:
+        Name: !Sub ${DefaultName}-slack
+      Environment:
+        Variables:
+          DEFAULT_REGION: !Sub ${AWS::Region}
+          SLACK_BOT_TOKEN: xoxb-00000000000000000000000000000000000000000000000  # 슬랙 토큰
+  ##########################################################################
+  #   AWS::CloudWatch::Alarm
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-properties-cw-alarm.html
+  #   실시간 서비스 오류 알림을 처리하기에는 부적합
+  #   인프라 측면에서 요금/자원/보안 등의 알림 설정으로는 적합
+  ##########################################################################
+  ##########################################################################
+  #   AWS::SNS::Topic
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-properties-sns-topic.html
+  ##########################################################################
+  SlackTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub ${DefaultName}-topic
+      TopicName: !Sub ${DefaultName}-topic
+      Subscription:
+        - Endpoint: !GetAtt SlackLambda.Arn
+          Protocol: lambda
+  ##########################################################################
+  #   AWS::Lambda::Permission
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-permission.html
+  #   슬랙 람다에 트리거 적용 > SNS Topic에 접속 권한 부여
+  ##########################################################################
+  AicoSlackBaseTopicPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SlackLambda
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com # Allow SNS Notifications
+      SourceArn: !Ref SlackTopic
+
+  ##########################################################################     
+  ##########################################################################
+  #   람다 테스트 
+  #   AWS::Serverless::Function
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/sam-resource-function.html
+  ##########################################################################
+  SamleLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-lambda
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/람다롤이름
+      CodeUri: template/sns/lambda
+      Handler: app.lambda_handler
+      Tags:
+        Name: !Sub ${DefaultName}-lambda
+  ##########################################################################
+  #   AWS::Logs::LogGroup
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  ##########################################################################
+  SamleLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: [SamleLambda] # S3dataReader가 생성된 후 로그 그룹을 생성
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SamleLambda} # Lambda name 바탕 로그 그룹 생성
+      RetentionInDays: 30 #  로그 그룹 유지 기간
+  ##########################################################################
+  #   AWS::Lambda::Permission
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  #   슬랙 람다에 트리거 적용 > LogGroup에 접속 권한 부여
+  ##########################################################################
+  SamleLambdaLogGroupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SlackLambda
+      Action: "lambda:InvokeFunction"
+      Principal: !Sub "logs.${AWS::Region}.amazonaws.com"
+      SourceArn: !GetAtt SamleLambdaLogGroup.Arn
+      SourceAccount: !Sub ${AWS::AccountId}
+  ##########################################################################
+  #   AWS::Logs::SubscriptionFilter
+  #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-logs-subscriptionfilter.html
+  #   실시간 서비스 오류 알림을 처리하기에는 적합
+  ##########################################################################
+  SamleLambdaLogGroupSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !GetAtt SlackLambda.Arn
+      FilterPattern: ERROR # define Subscription Filter pattern
+      LogGroupName: !Ref SamleLambdaLogGroup
+
+
