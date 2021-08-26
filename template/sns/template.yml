@@ -67,6 +67,25 @@ Resources:
   #   실시간 서비스 오류 알림을 처리하기에는 부적합
   #   인프라 측면에서 요금/자원/보안 등의 알림 설정으로는 적합
   ##########################################################################
+  SlackAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${DefaultName}-Alarm
+      AlarmDescription: "Error occurring alarm and send it to sns if greater than zero"
+      AlarmActions:
+        - !GetAtt SlackTopic.Arn
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SamleLambda
+        - Name: Resource
+          Value: !GetAtt SamleLambda.Arn
+      EvaluationPeriods: 1
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 60
+      Statistic: Sum
+      Threshold: "0"
   ##########################################################################
   #   AWS::SNS::Topic
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-properties-sns-topic.html
