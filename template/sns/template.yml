@@ -85,7 +85,7 @@ Resources:
       Namespace: AWS/Lambda
       Period: 60
       Statistic: Sum
-      Threshold: "0"
+      Threshold: 0
   ##########################################################################
   #   AWS::SNS::Topic
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-properties-sns-topic.html
