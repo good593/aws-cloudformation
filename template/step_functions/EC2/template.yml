@@ -104,17 +104,17 @@ Resources:
       JobDefinitionName: !Sub ${StageType}-batch-${DefaultName}-JobDef
       Type: container
       PlatformCapabilities:
-        - FARGATE
+        - EC2
       RetryStrategy:
         Attempts: 1
       Timeout:
         AttemptDurationSeconds: 7200
       ContainerProperties:
-        # ResourceRequirements:
-        #   - Type: "VCPU"
-        #     Value: "8" 
-        #   - Type: "MEMORY"
-        #     Value: "16384" # 8GB # 16384(16GB) # 30720(30GB)
+        ResourceRequirements:
+          - Type : VCPU
+            Value : '8' # MAX 4vCPU
+          - Type : MEMORY
+            Value : '8192' # 8GB # 16384(16GB) # MAX 30,720(30GB)
         ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} #Fargate 이용시 사용될 역할
         Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/image-name-ecr:${StageType} # 이미지 파일 넣기
         JobRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} # job 역할
