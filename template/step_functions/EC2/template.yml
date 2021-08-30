@@ -71,6 +71,7 @@ Resources:
   ##########################################################################
   #   AWS::Batch::ComputeEnvironment
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-computeenvironment.html
+  #   ecsInstanceRole >> https://docs.aws.amazon.com/ko_kr/batch/latest/userguide/instance_IAM_role.html
   ##########################################################################
   BatchComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -80,13 +81,18 @@ Resources:
       ServiceRole: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole}
       State: ENABLED
       ComputeResources:
-        MaxvCpus: 72
+        DesiredvCpus: 8
+        InstanceRole: !Sub arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole
+        InstanceTypes:
+          - inf1.2xlarge
+        MaxvCpus: 8
+        MinvCpus: 4
         SecurityGroupIds:
           - sg-00000000000000000
         Subnets:
           - subnet-00000000000000000
           - subnet-11111111111111111
-        Type: FARGATE # FARGATE or EC2   / FARGATE 이용시 MaxvCpus만 설정하면 됨
+        Type: EC2 # FARGATE or EC2   / FARGATE 이용시 MaxvCpus만 설정하면 됨
   ##########################################################################
   #   AWS::Batch::JobDefinition
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-jobdefinition.html
@@ -105,9 +111,9 @@ Resources:
       ContainerProperties:
         ResourceRequirements:
           - Type: "VCPU"
-            Value: "4" # MAX 4vCPU
+            Value: "8" 
           - Type: "MEMORY"
-            Value: "30720" # 8GB # 16384(16GB) # MAX 30720(30GB)
+            Value: "16384" # 8GB # 16384(16GB) # 30720(30GB)
         ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} #Fargate 이용시 사용될 역할
         Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/image-name-ecr:${StageType} # 이미지 파일 넣기
         JobRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} # job 역할
