@@ -84,8 +84,9 @@ Resources:
         DesiredvCpus: 8
         InstanceRole: !Sub arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole
         InstanceTypes:
-          - inf1.2xlarge
-        MaxvCpus: 8
+          - c5
+          - m5
+        MaxvCpus: 16
         MinvCpus: 4
         SecurityGroupIds:
           - sg-00000000000000000
@@ -109,11 +110,11 @@ Resources:
       Timeout:
         AttemptDurationSeconds: 7200
       ContainerProperties:
-        ResourceRequirements:
-          - Type: "VCPU"
-            Value: "8" 
-          - Type: "MEMORY"
-            Value: "16384" # 8GB # 16384(16GB) # 30720(30GB)
+        # ResourceRequirements:
+        #   - Type: "VCPU"
+        #     Value: "8" 
+        #   - Type: "MEMORY"
+        #     Value: "16384" # 8GB # 16384(16GB) # 30720(30GB)
         ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} #Fargate 이용시 사용될 역할
         Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/image-name-ecr:${StageType} # 이미지 파일 넣기
         JobRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${BatchRole} # job 역할
