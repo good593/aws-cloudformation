@@ -72,6 +72,7 @@ Resources:
   #   AWS::Batch::ComputeEnvironment
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-computeenvironment.html
   #   ecsInstanceRole >> https://docs.aws.amazon.com/ko_kr/batch/latest/userguide/instance_IAM_role.html
+  #   MinvCpus: 0  >>  https://docs.opendata.aws/genomics-workflows/core-env/setup-aws-batch.html
   ##########################################################################
   BatchComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -87,13 +88,14 @@ Resources:
           - c5
           - m5
         MaxvCpus: 16
-        MinvCpus: 4
+        MinvCpus: 0  # Setting this to 0 means that AWS Batch will terminate all instances when all queued jobs are complete.
         SecurityGroupIds:
           - sg-00000000000000000
         Subnets:
           - subnet-00000000000000000
           - subnet-11111111111111111
         Type: EC2 # FARGATE or EC2   / FARGATE 이용시 MaxvCpus만 설정하면 됨
+        Tags: { "Stage": "dev", "Name": "Batch Instance : EC2 인스턴스 이름" }
   ##########################################################################
   #   AWS::Batch::JobDefinition
   #   https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/aws-resource-batch-jobdefinition.html
