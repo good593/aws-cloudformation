@@ -112,6 +112,9 @@ Resources:
       Timeout:
         AttemptDurationSeconds: 7200
       ContainerProperties:
+        Environment:
+          - Name: REGION_NAME
+            Value: !Sub ${AWS::Region}
         ResourceRequirements:
           - Type : VCPU
             Value : '8' # MAX 4vCPU
