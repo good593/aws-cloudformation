@@ -22,6 +22,10 @@
           "BackoffRate": 2
         }
       ],
+      "Catch":[{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "Lambda01TaskError"
+      }],
       "Next": "Lambda02Map01"
     },
     "Lambda02Map01": {
@@ -57,10 +61,22 @@
                 "BackoffRate": 2
               }
             ],
+            "Catch":[{
+              "ErrorEquals": ["States.ALL"],
+              "Next": "Lambda02Map01TaskError"
+              }],
             "End": true
-          }
+          },
+          "Lambda02Map01TaskError":{
+            "Type":"Pass",     
+            "End": true
+          } 
         }
       }
+    },
+    "Lambda01TaskError":{
+      "Type":"Pass",     
+      "Next": "Lambda03Task"
     },
     "Lambda03Task": {
       "Type": "Task",

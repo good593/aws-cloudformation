@@ -130,7 +130,6 @@ Resources:
         ReadonlyRootFilesystem: false #읽기 전용 엑세스 권한
         Command: # 이미지에서 수행할 커맨드
           - python3
-          - -m
           - app
         LogConfiguration:
           LogDriver: awslogs
