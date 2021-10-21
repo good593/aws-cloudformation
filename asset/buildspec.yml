@@ -1,0 +1,48 @@
+version: 0.2
+
+env:
+  git-credential-helper: yes
+  variables:
+    # docker 파라미터 정의
+    IMAGE_REPO_NAME: aico-pip-install-base-ecr
+    IMAGE_TAG: latest
+    AWS_ACCOUNT_ID: 711159021539
+    AWS_DEFAULT_REGION: ap-northeast-2
+    # package 파라미터 정의
+    PACKAGE_S3_BUCKET: aico-build-package-base
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+
+  pre_build:
+    commands:
+      # Docker push를 할 ECR에 로그인
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+
+  build:
+    commands:
+      - echo Build started on `date`
+      # package build
+      - sam build --template template.yml
+
+      - echo Building the Docker image...
+      # docker build
+      # 도커 파일 빌드  -f 경로  -t <저장소 이름>/<이미지 이름>:<태그>
+      - docker build -f Dockerfile -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      # 도커 태그 달기 tag <이미지 이름>:<태그>  <저장소 주소, 사용자명>/<이미지 이름>:<태그>
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+  post_build:
+    commands:
+      # package
+      - sam package --s3-bucket $PACKAGE_S3_BUCKET --output-template-file outputtemplate.yml --s3-prefix build/aico-pip-install-base
+      # 도커 이미지 push <이미지 이름>:<태그>
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+artifacts:
+  type: zip
+  files:
+    - outputtemplate.yml

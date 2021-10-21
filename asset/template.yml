@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: PIP-INSTALL-BASE-LAYER
+
+##########################################################################
+#   Parameters >> https://docs.aws.amazon.com/ko_kr/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+##########################################################################
+Parameters:
+  PythonVersion:
+    Type: String
+    Default: python3.8
+
+Resources:
+  ##########################################################################
+  #   https://github.com/aws/aws-sam-cli/issues/2335
+  #   https://docs.aws.amazon.com/ko_kr/serverless-application-model/latest/developerguide/building-layers.html
+  ##########################################################################
+  AicoPipInstallBaseLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.7
+        - !Sub ${PythonVersion}
+      ContentUri: .
+      Description: >
+        Provides the base backend shared library and dependencies:
+        aico_lib, boto3==1.17.50, botocore==1.20.50, aws-psycopg2==1.2.1, requests==2.25.1
+      LayerName: aico-pip-install-base-layer
+    Metadata:
+      BuildMethod: !Sub ${PythonVersion} # Required to have AWS SAM build this layer
+
+# Outputs:
+#   OutputAicoPipInstallBaseLayer:
+#     Description: >
+#       Provides the base backend shared library and dependencies:
+#       aico_lib, boto3==1.17.50, botocore==1.20.50, aws-psycopg2==1.2.1, requests==2.25.1
+#     Value: !Ref AicoPipInstallBaseLayer
+#     Export:
+#       Name: pip-install-base:OutputAicoPipInstallBaseLayer

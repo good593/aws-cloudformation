@@ -127,7 +127,7 @@ class AWS_LOG:
 class AICO_SLACK:
 	def __init__(self, pSlackChannelNm: str):
 		self.slack_channel = pSlackChannelNm
-		self.client = WebClient(token=os.environ.get('SLACK_BOT_TOKEN', 'xoxb-1937774451878-1941506985429-IklWAs8FFZwk6rLD6s0gQOpO')) 
+		self.client = WebClient(token=os.environ.get('SLACK_BOT_TOKEN', '토큰 값')) 
 		self.format_msg = {
 			"ERROR_MSG": None,
 			"ERROR_TIME": None,

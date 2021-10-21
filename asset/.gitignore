@@ -1,0 +1,10 @@
+# 가상환경
+.venv
+# vscode 설정파일
+.vscode
+# jupyter 파일
+*.ipynb
+# cashe
+__pycache__
+# aws sam
+.aws-sam
