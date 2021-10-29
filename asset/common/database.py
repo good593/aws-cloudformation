@@ -4,7 +4,7 @@ import psycopg2
 import psycopg2.extras
 
 from constants import SQL_TYPE, DB_TYPE, get_bucket_pip_install_base
-from exception import AICOBaseError
+from exception import BaseError
 
 __all__ = ["DatabaseMgmt"]
 
@@ -124,7 +124,7 @@ class DatabaseMgmt:
             if conn is not None:
                 conn.rollback()
 
-            raise AICOBaseError()
+            raise BaseError()
         finally:
             if conn is not None:
                 conn.close()

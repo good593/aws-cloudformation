@@ -3,13 +3,13 @@ import signal, json, logging, os
 from functools import wraps
 from constants import PRODUCT_CODE, SLACK_CHANNEL, STAGE_TYPE
 
-__all__ = ["AICOBaseError", "aico_timeout"]
+__all__ = ["BaseError", "base_timeout"]
 
-class AICOBaseError(Exception):
+class BaseError(Exception):
     def __set_environ_variables(self, pResult: json):
         logging.error("[__set_environ_variables] Start!!")
         if pResult["product_cd"] is None:
-            pResult["product_cd"] = os.environ.get("PRODUCT_CD", PRODUCT_CODE.none.name)
+            pResult["product_cd"] = os.environ.get("PRODUCT_CD", PRODUCT_CODE.none.name) + " / " + os.environ.get("STAGE_TYPE", STAGE_TYPE.none.name)
 
         if pResult["slack_channel_nm"] is None:
             pResult["slack_channel_nm"] = os.environ.get(
@@ -32,24 +32,24 @@ class AICOBaseError(Exception):
         pSeconds: int = 0,
     ) -> None:
         result = {
-            "product_cd": pProductCd + " / " + os.environ.get("STAGE_TYPE", STAGE_TYPE.none.name),
+            "product_cd": pProductCd,
             "slack_channel_nm": pSlackChannelNm,
             "service_info": pServiceInfo,
         }
 
-        logging.error("[AICOBaseError] Start!!")
+        logging.error("[BaseError] Start!!")
         ev_result = self.__set_environ_variables(result)
 
         if pSeconds > 0:
             ev_result["timeout_seconds"] = pSeconds
 
         str_ev_result = json.dumps(ev_result, ensure_ascii=False)
-        logging.error("[AICOBaseError] >> " + str_ev_result)
+        logging.error("[BaseError] >> " + str_ev_result)
         super().__init__(str_ev_result)
 
 
 # timeout = 20분
-def aico_timeout(
+def base_timeout(
     pProductCd: str,
     pSlackChannelNm: str,
     pServiceInfo: json = None,
@@ -57,7 +57,7 @@ def aico_timeout(
 ) -> object:
     def decorator(func):
         def _handle_timeout(signum, frame):
-            raise AICOBaseError(pProductCd, pSlackChannelNm, pServiceInfo, pSeconds)
+            raise BaseError(pProductCd, pSlackChannelNm, pServiceInfo, pSeconds)
 
         def wrapper(*args, **kwargs):
             signal.signal(signal.SIGALRM, _handle_timeout)
