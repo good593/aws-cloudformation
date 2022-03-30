@@ -1,0 +1,220 @@
+{
+  "Comment": "Aico Concentration Glue Service Process",
+  "StartAt": "Task01Arn",
+  "States": {
+    "Task01Arn": {
+      "Type": "Task",
+      "Resource": "${Task01Arn}",
+      "Next": "Parallel02"
+    },
+    "Parallel02": {
+      "Type": "Parallel",
+      "Next": "Task03Arn",
+      "InputPath": "$",
+      "Parameters": {
+        "p_product_code.$": "$.p_product_code",
+        "p_target_dt.$": "$.p_target_dt",
+        "p_env.$": "$.p_env"
+      },
+      "Branches": [
+        {
+          "StartAt": "Job01",
+          "States": {
+            "Job01": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${Job01}",
+                "Arguments": {
+                  "--p_product_code.$": "$.p_product_code",
+                  "--p_target_dt.$": "$.p_target_dt",
+                  "--p_env.$": "$.p_env"
+                }
+              },
+              "ResultSelector":{
+                "p_product_code.$": "$.Arguments.--p_product_code",
+                "p_target_dt.$": "$.Arguments.--p_target_dt",
+                "p_env.$": "$.Arguments.--p_env",
+                "JobName.$": "$.JobName",
+                "JobRunState.$": "$.JobRunState"
+              },
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 600,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 1.5
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "Job02",
+          "States": {
+            "Job02": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${Job02}",
+                "Arguments": {
+                  "--p_product_code.$": "$.p_product_code",
+                  "--p_target_dt.$": "$.p_target_dt",
+                  "--p_env.$": "$.p_env"
+                }
+              },
+              "ResultSelector":{
+                "p_product_code.$": "$.Arguments.--p_product_code",
+                "p_target_dt.$": "$.Arguments.--p_target_dt",
+                "p_env.$": "$.Arguments.--p_env",
+                "JobName.$": "$.JobName",
+                "JobRunState.$": "$.JobRunState"
+              },
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 600,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 1.5
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "Job03",
+          "States": {
+            "Job03": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${Job03}",
+                "Arguments": {
+                  "--p_product_code.$": "$.p_product_code",
+                  "--p_target_dt.$": "$.p_target_dt",
+                  "--p_env.$": "$.p_env"
+                }
+              },
+              "ResultSelector":{
+                "p_product_code.$": "$.Arguments.--p_product_code",
+                "p_target_dt.$": "$.Arguments.--p_target_dt",
+                "p_env.$": "$.Arguments.--p_env",
+                "JobName.$": "$.JobName",
+                "JobRunState.$": "$.JobRunState"
+              },
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 600,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 1.5
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "Job04",
+          "States": {
+            "Job04": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${Job04}",
+                "Arguments": {
+                  "--p_product_code.$": "$.p_product_code",
+                  "--p_target_dt.$": "$.p_target_dt",
+                  "--p_env.$": "$.p_env"
+                }
+              },
+              "ResultSelector":{
+                "p_product_code.$": "$.Arguments.--p_product_code",
+                "p_target_dt.$": "$.Arguments.--p_target_dt",
+                "p_env.$": "$.Arguments.--p_env",
+                "JobName.$": "$.JobName",
+                "JobRunState.$": "$.JobRunState"
+              },
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 600,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 1.5
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+  "Task03Arn": {
+    "Type": "Task",
+    "Resource": "${Task03Arn}",
+    "Next": "Parallel04"
+  },
+  "Parallel04":{
+    "Type": "Parallel",
+    "Next": "Task05Arn",
+    "InputPath": "$",
+    "Parameters": {
+      "p_product_code.$": "$.p_product_code",
+      "p_target_dt.$": "$.p_target_dt",
+      "p_env.$": "$.p_env",
+      "glue_list.$": "$.glue_list"
+    },
+    "Branches": [
+      {
+        "StartAt": "ParametersPass",
+        "States": {
+          "ParametersPass": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      {
+        "StartAt": "Job05",
+        "States": {
+          "Job05": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+            "Parameters": {
+              "JobName": "${Job05}",
+              "Arguments": {
+                "--p_product_code.$": "$.p_product_code",
+                "--p_target_dt.$": "$.p_target_dt",
+                "--p_env.$": "$.p_env"
+              }
+            },
+            "ResultSelector":{
+              "p_product_code.$": "$.Arguments.--p_product_code",
+              "p_target_dt.$": "$.Arguments.--p_target_dt",
+              "p_env.$": "$.Arguments.--p_env",
+              "JobName.$": "$.JobName",
+              "JobRunState.$": "$.JobRunState"
+            },
+            "End": true,
+            "Retry": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "IntervalSeconds": 600,
+                "MaxAttempts": 2,
+                "BackoffRate": 1.5
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "Task05Arn": {
+    "Type": "Task",
+    "Resource": "${Task05Arn}",
+    "End": true
+  }
+}
+}

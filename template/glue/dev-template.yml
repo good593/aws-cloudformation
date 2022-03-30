@@ -1,0 +1,429 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Glue service Template
+
+##########################################################################
+#   Parameters
+##########################################################################
+Parameters:
+  DefaultName:
+    Type: String
+    Default: sample-glue-service
+  StageType:
+    Type: String
+    Default: dev
+  ServiceType:
+    Type: String
+    Default: aico
+  PythonVersion:
+    Type: String
+    Default: python3.8
+  GlueIAMRoleName:
+    Type: String
+    Default: analyics-glue-base-role
+  GlueVersion:
+    Type: Number
+    Default: "3.0"
+  JobName01:
+    Type: String
+    Default: JobName01
+  JobName02:
+    Type: String
+    Default: JobName02
+  JobName03:
+    Type: String
+    Default: JobName03
+  JobName04:
+    Type: String
+    Default: JobName04
+  JobName05:
+    Type: String
+    Default: JobName05
+
+##########################################################################
+#   Globals
+##########################################################################
+Globals:
+  Function:
+    Runtime: !Sub ${PythonVersion}
+    MemorySize: 10240
+    Timeout: 900
+    Layers:
+      - !Ref LambdaSharedLayer
+    Tags:
+      ServiceType: !Sub ${ServiceType}
+    AutoPublishAlias: !Ref StageType
+    VpcConfig:
+      SecurityGroupIds:
+        - sg-11111111111111111111
+      SubnetIds:
+        - subnet-2222222222222222
+        - subnet-3333333333333333
+
+##########################################################################
+#   Resources
+##########################################################################
+Resources:
+  ##########################################################################
+  #   AWS::Serverless::LayerVersion
+  ##########################################################################
+  LambdaSharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - !Sub ${PythonVersion}
+      ContentUri: layer
+      Description: Provides the base backend shared library and dependencies
+      LayerName: !Sub ${DefaultName}-shared-layer
+    Metadata:
+      BuildMethod: !Sub ${PythonVersion} # Required to have AWS SAM build this layer
+
+  ##########################################################################
+  #   AWS::Serverless::Function
+  ##########################################################################
+  Task01:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-01-task
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/lambda-aico-concentration-service-role
+      CodeUri: functions/Task01/
+      Handler: app.aico_concentration_01_task
+      Tags:
+        Name: !Sub ${DefaultName}-01-task
+  # Task01 로그그룹 정의
+  Task01LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DefaultName}-01-task
+      RetentionInDays: 30
+  Task03:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-03-task
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/lambda-aico-concentration-service-role
+      CodeUri: functions/Task03/
+      Handler: app.aico_concentration_03_task
+      Tags:
+        Name: !Sub ${DefaultName}-03-task
+  # Task01 로그그룹 정의
+  Task03LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DefaultName}-03-task
+      RetentionInDays: 30
+  Task05:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${DefaultName}-05-task
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/lambda-aico-concentration-service-role
+      CodeUri: functions/Task05/
+      Handler: app.aico_concentration_05_task
+      Tags:
+        Name: !Sub ${DefaultName}-05-task
+  # Task01 로그그룹 정의
+  Task05LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DefaultName}-05-task
+      RetentionInDays: 30
+  
+
+  ##########################################################################
+  #   AWS::Glue::Job
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-glue-job.html#cfn-glue-job-workertype
+  # https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
+  ##########################################################################
+  Job01:
+    Type: AWS::Glue::Job
+    Properties:
+      Description: >
+        Glue Job
+      Command:
+        Name: glueetl   # Spark ETL job (JobCommand.Name="glueetl")
+        ScriptLocation: !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/${JobName01}.py
+      DefaultArguments: 
+        '--extra-py-files': !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/libs.zip,s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/layer.zip
+        '--spark-event-logs-path': !Sub s3://${StageType}-${ServiceType}-glue/sparkHistory/aicando/concentration/${JobName01}/
+        '--TempDir': !Sub s3://${StageType}-${ServiceType}-glue/temporary/aicando/concentration/${JobName01}/
+        '--enable-spark-ui': true
+        '--enable-glue-datacatalog': true
+        '--enable-continuous-cloudwatch-log': true
+        '--enable-metrics': true
+        '--job-bookmark-option': 'job-bookmark-disable'
+        '--job-language': 'python'
+      # Connections:
+      #   Connections:
+      #     - !Sub ${StageType}_pg_alps_aico
+      MaxRetries: 0
+      MaxCapacity: 2
+      Timeout: 300
+      ExecutionProperty:
+        MaxConcurrentRuns: 3   
+      Name: !Sub ${StageType}-${ServiceType}-${JobName01}
+      Role: !Sub ${StageType}-${GlueIAMRoleName}
+      GlueVersion: 3.0
+      Tags:
+        ServiceType: !Sub ${ServiceType}
+        StageType: !Sub ${StageType}
+        Name: !Sub ${StageType}-${ServiceType}-${JobName01}
+  Job02:
+    Type: AWS::Glue::Job
+    Properties:
+      Description: >
+        Glue Job
+      Command:
+        Name: glueetl   # Spark ETL job (JobCommand.Name="glueetl")
+        ScriptLocation: !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/${JobName02}.py
+      DefaultArguments: 
+        '--extra-py-files': !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/libs.zip,s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/layer.zip
+        '--spark-event-logs-path': !Sub s3://${StageType}-${ServiceType}-glue/sparkHistory/aicando/concentration/${JobName02}/
+        '--TempDir': !Sub s3://${StageType}-${ServiceType}-glue/temporary/aicando/concentration/${JobName02}/
+        '--enable-spark-ui': true
+        '--enable-glue-datacatalog': true
+        '--enable-continuous-cloudwatch-log': true
+        '--enable-metrics': true
+        '--job-bookmark-option': 'job-bookmark-disable'
+        '--job-language': 'python'
+      # Connections:
+      #   Connections:
+      #     - !Sub ${StageType}_pg_alps_aico
+      MaxRetries: 0
+      MaxCapacity: 2
+      Timeout: 300
+      ExecutionProperty:
+        MaxConcurrentRuns: 3   
+      Name: !Sub ${StageType}-${ServiceType}-${JobName02}
+      Role: !Sub ${StageType}-${GlueIAMRoleName}
+      GlueVersion: 3.0
+      Tags:
+        ServiceType: !Sub ${ServiceType}
+        StageType: !Sub ${StageType}
+        Name: !Sub ${StageType}-${ServiceType}-${JobName02}
+  Job03:
+    Type: AWS::Glue::Job
+    Properties:
+      Description: >
+        AICO Concentration Interactive Glue Job
+      Command:
+        Name: glueetl   # Spark ETL job (JobCommand.Name="glueetl")
+        ScriptLocation: !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/${JobName03}.py
+      DefaultArguments: 
+        '--extra-py-files': !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/libs.zip,s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/layer.zip
+        '--spark-event-logs-path': !Sub s3://${StageType}-${ServiceType}-glue/sparkHistory/aicando/concentration/${JobName03}/
+        '--TempDir': !Sub s3://${StageType}-${ServiceType}-glue/temporary/aicando/concentration/${JobName03}/
+        '--enable-spark-ui': true
+        '--enable-glue-datacatalog': true
+        '--enable-continuous-cloudwatch-log': true
+        '--enable-metrics': true
+        '--job-bookmark-option': 'job-bookmark-disable'
+        '--job-language': 'python'
+      # Connections:
+      #   Connections:
+      #     - !Sub ${StageType}_pg_alps_aico
+      MaxRetries: 0
+      MaxCapacity: 2
+      Timeout: 300
+      ExecutionProperty:
+        MaxConcurrentRuns: 3   
+      Name: !Sub ${StageType}-${ServiceType}-${JobName03}
+      Role: !Sub ${StageType}-${GlueIAMRoleName}
+      GlueVersion: 3.0
+      Tags:
+        ServiceType: !Sub ${ServiceType}
+        StageType: !Sub ${StageType}
+        Name: !Sub ${StageType}-${ServiceType}-${JobName03}
+  Job04:
+    Type: AWS::Glue::Job
+    Properties:
+      Description: >
+        AICO Concentration Media Glue Job
+      Command:
+        Name: glueetl   # Spark ETL job (JobCommand.Name="glueetl")
+        ScriptLocation: !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/${JobName04}.py
+      DefaultArguments: 
+        '--extra-py-files': !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/libs.zip,s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/layer.zip
+        '--spark-event-logs-path': !Sub s3://${StageType}-${ServiceType}-glue/sparkHistory/aicando/concentration/${JobName04}/
+        '--TempDir': !Sub s3://${StageType}-${ServiceType}-glue/temporary/aicando/concentration/${JobName04}/
+        '--enable-spark-ui': true
+        '--enable-glue-datacatalog': true
+        '--enable-continuous-cloudwatch-log': true
+        '--enable-metrics': true
+        '--job-bookmark-option': 'job-bookmark-disable'
+        '--job-language': 'python'
+      # Connections:
+      #   Connections:
+      #     - !Sub ${StageType}_pg_alps_aico
+      MaxRetries: 0
+      MaxCapacity: 2
+      Timeout: 300
+      ExecutionProperty:
+        MaxConcurrentRuns: 3   
+      Name: !Sub ${StageType}-${ServiceType}-${JobName04}
+      Role: !Sub ${StageType}-${GlueIAMRoleName}
+      GlueVersion: 3.0
+      Tags:
+        ServiceType: !Sub ${ServiceType}
+        StageType: !Sub ${StageType}
+        Name: !Sub ${StageType}-${ServiceType}-${JobName04}
+  Job05:
+    Type: AWS::Glue::Job
+    Properties:
+      Description: >
+        AICO Concentration Dynamodb Glue Job
+      Command:
+        Name: glueetl   # Spark ETL job (JobCommand.Name="glueetl")
+        ScriptLocation: !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/${JobName05}.py
+      DefaultArguments: 
+        '--extra-py-files': !Sub s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/libs.zip,s3://${StageType}-${ServiceType}-glue/script/aicando/concentration/layer.zip
+        '--spark-event-logs-path': !Sub s3://${StageType}-${ServiceType}-glue/sparkHistory/aicando/concentration/${JobName05}/
+        '--TempDir': !Sub s3://${StageType}-${ServiceType}-glue/temporary/aicando/concentration/${JobName05}/
+        '--enable-spark-ui': true
+        '--enable-glue-datacatalog': true
+        '--enable-continuous-cloudwatch-log': true
+        '--enable-metrics': true
+        '--job-bookmark-option': 'job-bookmark-disable'
+        '--job-language': 'python'
+      # Connections:
+      #   Connections:
+      #     - !Sub ${StageType}_pg_alps_aico
+      MaxRetries: 0
+      MaxCapacity: 2
+      Timeout: 300
+      ExecutionProperty:
+        MaxConcurrentRuns: 3   
+      Name: !Sub ${StageType}-${ServiceType}-${JobName05}
+      Role: !Sub ${StageType}-${GlueIAMRoleName}
+      GlueVersion: 3.0
+      Tags:
+        ServiceType: !Sub ${ServiceType}
+        StageType: !Sub ${StageType}
+        Name: !Sub ${StageType}-${ServiceType}-${JobName05}
+
+  ##########################################################################
+  #   StepFunction에 대한 정의
+  # https://www.davehall.com.au/blog/2020/07/10/logging-step-functions-cloudwatch/
+  ##########################################################################
+  ConcentrationModelStateMachine:
+    Type: AWS::Serverless::StateMachine
+    DependsOn:
+      - Task01
+      - Job01
+      - Job02
+      - Job03
+      - Job04
+    Properties:
+      Name: !Sub ${StageType}-states-${DefaultName}
+      Tags:
+        Name: !Sub ${StageType}-states-${DefaultName}
+        ServicType: !Sub ${ServiceType}
+      Role: !GetAtt StepFunctionsRole.Arn
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ConcentrationModelStateMachineLogGroup.Arn
+        IncludeExecutionData: True
+        Level: ERROR #ALL
+      DefinitionUri: statemachine/step_function.asl.json
+      DefinitionSubstitutions:
+        Task01Arn: !Sub ${Task01.Arn}:${StageType}
+        Job01: !Sub ${Job01}
+        Job02: !Sub ${Job02}
+        Job03: !Sub ${Job03}
+        Job04: !Sub ${Job04}
+        Task03Arn: !Sub ${Task03.Arn}:${StageType}
+        Job05: !Sub ${Job05}
+        Task05Arn: !Sub ${Task05.Arn}:${StageType}
+  # StepFunction 로그
+  ConcentrationModelStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/states/${StageType}-states-${DefaultName}
+      RetentionInDays: 30
+
+  # StepFunction역할 생성
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub states-${DefaultName}-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  StepFunctionsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub states-${DefaultName}-policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - batch:SubmitJob
+          - batch:DescribeJobs
+          - batch:TerminateJob
+          - events:PutTargets
+          - events:PutRule
+          - events:DescribeRule
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - xray:PutTraceSegments
+          - xray:PutTelemetryRecords
+          - xray:GetSamplingRules
+          - xray:GetSamplingTargets
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - sns:Publish
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - autoscaling:Describe*
+          - cloudwatch:*
+          - logs:*
+          - sns:*
+          - iam:GetPolicy
+          - iam:GetPolicyVersion
+          - iam:GetRole
+          - iam:PassRole
+          - iam:DetachRolePolicy
+          - iam:DeleteRolePolicy
+          - iam:DeleteRole
+          - iam:CreateRole
+          - iam:AttachRolePolicy
+          - iam:PutRolePolicy
+          Resource: '*'
+        - Effect: Allow
+          Action: states:StartExecution
+          Resource: '*'
+        - Effect: Allow
+          Action: lambda:InvokeFunction
+          Resource: '*'
+        - Effect: Allow
+          Sid: CloudWatchEventsFullAccess
+          Action: events:*
+          Resource: '*'
+        - Effect: Allow
+          Sid: GlueFullExecution
+          Action: glue:*
+          Resource: '*'
+      Roles:
+        - !Ref StepFunctionsRole
+Outputs:
+  StepFunctionsRoleArn:
+    Description: >
+      StepFunctionsRoleArn for dev & ops
+    Value: !GetAtt StepFunctionsRole.Arn
+    Export:
+      Name: !Sub ${DefaultName}:StepFunctionsRoleArn
+
+
+
