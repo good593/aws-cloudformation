@@ -1,11 +1,8 @@
-import re, boto3, logging, json
+import boto3, logging, json, os
 import pandas as pd
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-from datetime import datetime, timedelta
-from dateutil import tz
-from pytz import timezone
 from io import BytesIO
 from botocore.exceptions import ClientError
 
@@ -65,35 +62,42 @@ def get_df_from_dynamodb(pTableNm:str, pColumns:list=None) -> pd.DataFrame:
   return result
 
 
-def camel_to_snake(data: str) -> str:
-  _name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", data)
+def os_mkdir(path):
+  if not os.path.exists(path):
+    os.mkdir(path)
 
-  return re.sub("([a-z0-9])([A-Z])", r"\1_\2", _name).lower()
+def download_videos_from_s3(pS3Prefix: str, pLoginDt, pLogoutDt):
+  
+  DOWNLOAD_PREFIX = ''
+  os_mkdir(DOWNLOAD_PREFIX)
+  video_list = []
 
-def snake_to_camel(data: str) -> str:
-  REG = r"(.*?)_([a-zA-Z])"
-  pattern = re.compile(REG)
+  s3_resource = boto3.resource('s3')
+  bucket = ''
+  service_bucket = s3_resource.Bucket(bucket)
+  objects = service_bucket.objects.filter(Prefix=pS3Prefix)
+  for obj in objects:
+    try:
+      tmp = {}
+      path, filename = os.path.split(obj.key)
+      service_bucket.download_file(obj.key, DOWNLOAD_PREFIX+filename)
+      tmp['filename'] = filename
+      tmp['file_path'] = DOWNLOAD_PREFIX+filename
+      tmp['obj_key'] = obj.key
 
-  def __camel(match):
-    return match.group(1) + match.group(2).upper()
+      video_list.append(tmp)
+    except (FileNotFoundError, Exception) as e:
+      logging.error(e)
 
-  return pattern.sub(__camel, data, 0)
+  return video_list
 
-def get_yesterday(timeZone:str='Asia/Seoul') -> str:
-	today = datetime.now(timezone(timeZone))
-	return (today - timedelta(days = 1)).strftime('%Y-%m-%d')
 
-def get_today(timeZone:str='Asia/Seoul') -> str:
-	return datetime.now(timezone(timeZone)).strftime('%Y-%m-%d')
+def upload_image_to_s3(pFileObj, pKey):
+  s3 = boto3.client('s3')
+  bucket = ''
+  s3.upload_file(pFileObj, bucket, pKey)
 
-def get_targetdayTz(ptz: str, pTargetDay: str = None) -> str:
-	defaul_zone = 'UTC'
-	utc_zone = tz.gettz('UTC')
-	target_zone = tz.gettz(ptz)
-	
-	if not pTargetDay:
-		temp = datetime.strptime(get_yesterday(defaul_zone), '%Y-%m-%d').replace(tzinfo=utc_zone)
-	else:
-		temp = datetime.strptime(pTargetDay, '%Y-%m-%d').replace(tzinfo=utc_zone)
-	
-	return temp.astimezone(target_zone).strftime("%Y-%m-%d %H:%M:%S")
+def upload_audio_to_s3(pFileObj, pKey):
+  s3 = boto3.client('s3')
+  bucket = ''
+  s3.put_object(Bucket = bucket, Body = pFileObj, Key = pKey, ContentType = 'audio/mpeg')
