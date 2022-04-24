@@ -1,4 +1,4 @@
-import re, boto3, logging
+import re, boto3, logging, json
 import pandas as pd
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -8,6 +8,15 @@ from dateutil import tz
 from pytz import timezone
 from io import BytesIO
 from botocore.exceptions import ClientError
+
+def json_load_s3(pKey:str, pBucket:str) -> list[dict]:
+  s3 = boto3.resource("s3").Bucket(pBucket)
+  return json.load(s3.Object(key=pKey).get()["Body"])
+
+def json_dump_s3(pOjb:object, pBucket:str, pKey:str) -> dict:
+  s3 = boto3.resource("s3").Bucket(pBucket)
+  return s3.Object(key=pKey).put(Body=json.dumps(pOjb))
+
 
 def save_json_to_s3(pDf:pd.DataFrame, pKey:str, pBucket:str) -> None:
   s3 = boto3.resource("s3").Bucket(pBucket)
@@ -70,14 +79,14 @@ def snake_to_camel(data: str) -> str:
 
   return pattern.sub(__camel, data, 0)
 
-def get_yesterday(timeZone='Asia/Seoul'):
+def get_yesterday(timeZone:str='Asia/Seoul') -> str:
 	today = datetime.now(timezone(timeZone))
 	return (today - timedelta(days = 1)).strftime('%Y-%m-%d')
 
-def get_today(timeZone='Asia/Seoul'):
+def get_today(timeZone:str='Asia/Seoul') -> str:
 	return datetime.now(timezone(timeZone)).strftime('%Y-%m-%d')
 
-def get_targetdayTz(ptz: str, pTargetDay: str = None):
+def get_targetdayTz(ptz: str, pTargetDay: str = None) -> str:
 	defaul_zone = 'UTC'
 	utc_zone = tz.gettz('UTC')
 	target_zone = tz.gettz(ptz)
