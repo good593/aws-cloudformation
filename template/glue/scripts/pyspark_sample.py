@@ -1,6 +1,6 @@
 import sys
 
-from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
 
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
@@ -17,7 +17,8 @@ p_env = args['p_env']
 target_dt = args['p_target_dt']
 
 # init
-glueContext = GlueContext(SparkContext())
+spark_session = SparkSession.builder.config("spark.sql.broadcastTimeout", "36000").getOrCreate()
+glueContext = GlueContext(spark_session)
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
