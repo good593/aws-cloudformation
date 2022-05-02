@@ -40,22 +40,38 @@ def get_df_from_s3_parquets(prefix:str, pBucket:str) -> pd.DataFrame:
 
 
 def get_df_from_dynamodb(pTableNm:str, pColumns:list=None) -> pd.DataFrame:
+  """
+  https://stackoverflow.com/questions/36780856/complete-scan-of-dynamodb-with-boto3
+  """
   result = None
 
   try:
     dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
     table = dynamodb.Table(pTableNm)
+    last_evaluated_key = None
 
-    if isinstance(pColumns, list):
-      select_cols = ''
-      for col in pColumns:
-        select_cols += col + ','
-      select_cols = select_cols[:-1]
-      response = table.scan(ProjectionExpression=select_cols)
-    else:
-      response = table.scan()
+    while True:
+      response = None
+      if isinstance(pColumns, list):
+        select_cols = ''
+        for col in pColumns:
+          select_cols += col + ','
+        select_cols = select_cols[:-1]
+        if last_evaluated_key:
+          response = table.scan(ProjectionExpression=select_cols, ExclusiveStartKey=last_evaluated_key)
+        else:
+          response = table.scan(ProjectionExpression=select_cols)
+      elif last_evaluated_key:
+        response = table.scan(ExclusiveStartKey=last_evaluated_key)
+      else:
+        response = table.scan()
 
-    result = pd.json_normalize(response['Items'])
+      if response:
+        result = pd.json_normalize(response['Items'])
+        last_evaluated_key = response.get('LastEvaluatedKey')
+      if not last_evaluated_key:
+        break
+
   except (ClientError, Exception) as e:
     logger.exception(f'[get_data_from_dynamdb] pTableNm: {str(pTableNm)}')
     logger.exception(f'[get_data_from_dynamdb] error: {str(e)}')
@@ -67,7 +83,6 @@ def os_mkdir(path):
     os.mkdir(path)
 
 def download_videos_from_s3(pS3Prefix: str, pLoginDt, pLogoutDt):
-  
   DOWNLOAD_PREFIX = ''
   os_mkdir(DOWNLOAD_PREFIX)
   video_list = []
