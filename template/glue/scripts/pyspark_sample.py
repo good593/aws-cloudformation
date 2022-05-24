@@ -11,7 +11,7 @@ from layer.common.constants import *
 from libs.script.common import *
 
 
-def get_df_from_dynamodb(pGlueContext:GlueContext, pTableNm:str, pStage:str):
+def get_df_from_dynamodb(pGlueContext:GlueContext, pTableNm:str):
   
   dynamic_frame = pGlueContext.create_dynamic_frame.from_options(
     connection_type="dynamodb",
@@ -27,13 +27,13 @@ def get_df_from_dynamodb(pGlueContext:GlueContext, pTableNm:str, pStage:str):
   df_dynamodb.createOrReplaceTempView(pTableNm)
   return df_dynamodb
 
-def save_df_to_s3(p_df, p_mode='overwrite'):
+def save_df_to_s3(pDf, pMode='overwrite'):
   # save
   bucket = "bucket_nm"
   batch_daily = "path"
   save_path = bucket + batch_daily
   
-  p_df.write.mode(p_mode).format("parquet").save(save_path)
+  pDf.write.mode(pMode).format("parquet").save(save_path)
   # df_save.write.mode("append").format("parquet").save(save_path)
 
 
