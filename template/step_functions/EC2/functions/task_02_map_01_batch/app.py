@@ -14,24 +14,24 @@ def lambda_handler(event):
     "age": age
   }
 
+if __name__ == '__main__':
+  # https://gonigoni.kr/posts/step-function-with-python/
+  # https://stackoverflow.com/questions/55343073/is-there-a-way-to-retrieve-the-step-function-tasktoken-from-within-a-batch-job
+  client = boto3.client('stepfunctions', config=Config(read_timeout=70), region_name=os.environ['REGION_NAME'])
+  task_token = os.environ['TASK_TOKEN']
 
-# https://gonigoni.kr/posts/step-function-with-python/
-# https://stackoverflow.com/questions/55343073/is-there-a-way-to-retrieve-the-step-function-tasktoken-from-within-a-batch-job
-client = boto3.client('stepfunctions', config=Config(read_timeout=70))
-task_token = os.environ['TASK_TOKEN']
+  try:
 
-try:
+    client.send_task_heartbeat(taskToken=task_token)
 
-  client.send_task_heartbeat(taskToken=task_token)
+    params = {
+      'stage_type': os.environ['stage_type'],
+      'name': os.environ['name'],
+      'age': os.environ['age']
+    }
 
-  params = {
-    'stage_type': os.environ['stage_type'],
-    'name': os.environ['name'],
-    'age': os.environ['age']
-  }
+    result = lambda_handler(params)
+    client.send_task_success(taskToken=task_token, output=json.dumps(result))
 
-  result = lambda_handler(params)
-  client.send_task_success(taskToken=task_token, output=json.dumps(result))
-
-except Exception as e:
-  client.send_task_failure(taskToken=task_token)
+  except Exception as e:
+    client.send_task_failure(taskToken=task_token)

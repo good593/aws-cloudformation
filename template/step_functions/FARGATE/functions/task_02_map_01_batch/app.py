@@ -18,7 +18,7 @@ def lambda_handler(event, content):
 if __name__ == '__main__':
   # https://gonigoni.kr/posts/step-function-with-python/
   # https://stackoverflow.com/questions/55343073/is-there-a-way-to-retrieve-the-step-function-tasktoken-from-within-a-batch-job
-  client = boto3.client('stepfunctions', config=Config(read_timeout=70))
+  client = boto3.client('stepfunctions', config=Config(read_timeout=70), region_name=os.environ['REGION_NAME'])
   task_token = os.environ['TASK_TOKEN']
 
   try:
